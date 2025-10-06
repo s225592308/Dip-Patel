@@ -1,0 +1,256 @@
+---
+title: "Part 1"
+author: "DIP PATE(S225592308)"
+date: "2025-10-06"
+output: html_document
+---
+
+#1. Read in the file, making the gene identifiers the row names. Show a table of values for the first six genes.
+```{r}
+# Q1: download, import, and preview the gene_expression.tsv file
+# Define the raw URL for gene_expression.tsv from the assignment repo
+url_gene <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/gene_expression.tsv"
+
+# Download to your project folder (overwrite = TRUE if you re-run)
+download.file(url_gene, destfile = "gene_expression.tsv", mode = "wb")
+
+# Read the TSV:
+gene_expression <- read.table("gene_expression.tsv",
+                              header = TRUE, sep = "\t", row.names = 1,
+                              check.names = FALSE)
+
+# Show a table of the first six genes 
+head(gene_expression)
+```
+#ANSWER-1 :The RNA-seq count data file (gene_expression.tsv) was imported using the read.table() function in R, with header = TRUE to include column names and row.names = 1 to assign gene identifiers as the row names. This ensures that each gene (e.g. ENSG00000223972.5 DDX11L1) can be used as a unique index for expression values across samples. After successfully importing, the first six genes were displayed using the head() function. The table shows expression counts for three samples (GTEX-1117F-0226-SM-5GZZ7, GTEX-1117F-0426-SM-5EGHI, and GTEX-1117F-0526-SM-5EGHJ).
+
+
+#2. Make a new column which is the mean of the other columns. Show a table of values for the first six genes.
+```{r}
+# Q2: Calculate mean expression per gene
+
+# Inspect structure (helps catch non-numeric columns)
+str(gene_expression)
+
+# Keep only numeric sample columns 
+gene_expression_num <- gene_expression[, sapply(gene_expression, is.numeric)]
+
+# Compute mean expression per gene 
+mean_per_gene <- rowMeans(gene_expression_num, na.rm = TRUE)
+
+# Attach the result back to the main table as a new column
+gene_expression$mean_expression <- mean_per_gene
+
+# Preview the first few rows to show it worked
+head(gene_expression)
+```
+#ANSWER-2 : Only numeric columns were kept, and the mean count for each gene across all samples was calculated with rowMeans(). A new column named mean_expression was appended to the data frame. The first six rows were displayed again, showing that the new column correctly contains the average expression for each gene.
+
+
+#3. List the 10 genes with the highest mean expression
+```{r}
+# Q3: Top 10 genes by mean expression
+
+# Safety: ensure the mean column exists
+stopifnot("mean_expression" %in% colnames(gene_expression))
+
+# Get the row order for descending mean values 
+ord <- order(gene_expression$mean_expression, decreasing = TRUE)  # bigger first
+
+# Subset the first 10 rows in that order
+top10 <- gene_expression[ord[1:10], ]
+
+#  mean column 
+top10_out <- top10[, c(setdiff(colnames(gene_expression), "mean_expression"),
+                       "mean_expression")]
+
+# 5) Print neatly
+top10_out
+```
+#ANSWER-3 :The data frame was ordered by the mean_expression column in decreasing order, and the top 10 genes were extracted. These correspond to mitochondrial and highly expressed housekeeping genes (e.g. MT-CO1, MT-ND4, MT-CO3). The result confirms that the script correctly identifies the most highly expressed genes.
+
+
+#4. Determine the number of genes with a mean <10
+```{r}
+# Q4: Count how many genes have mean < 10 
+
+# Safety check: make sure mean column exists
+stopifnot("mean_expression" %in% colnames(gene_expression))
+
+# Create a logical vector (TRUE where mean < 10)
+low_genes <- gene_expression$mean_expression < 10
+
+# Count how many TRUE values 
+num_low_genes <- sum(low_genes, na.rm = TRUE)
+
+# Display the result
+cat("Number of genes with mean expression < 10:", num_low_genes, "\n")
+```
+#ANSWER-4 A logical condition was applied (gene_expression$mean_expression < 10), and the number of TRUE values was summed, giving 35 988 genes with mean expression below 10.This indicates that the majority of genes in this dataset are expressed at very low levels, which is typical of RNA-seq count data where only a subset of genes are highly expressed.
+
+
+#5. Make a histogram plot of the mean values and include it into your report.
+```{r}
+# Q5: Histogram of mean expression values (log-scaled)
+
+# Check that the mean_expression column exists
+stopifnot("mean_expression" %in% colnames(gene_expression))
+
+# Compute log10 of mean values (+1 to avoid log(0))
+log_mean <- log10(gene_expression$mean_expression + 1)
+
+# Create the histogram
+hist(
+  log_mean,
+  breaks = 50,
+  col = "skyblue",
+  main = "Histogram of log10(Mean Gene Expression + 1)",
+  xlab = "log10(Mean Expression + 1)",
+  ylab = "Number of Genes"
+)
+
+# Add a red vertical line for log10(10)
+abline(v = log10(10 + 1), col = "red", lwd = 2)
+
+# Print a brief message with summary info
+cat("Plotted histogram of log-transformed mean expression values.\n")
+
+```
+#ANSWER-5 :A histogram of the mean gene expression values was generated after applying a log10 transformation (log10(mean_expression + 1)) to normalise the data and reduce the impact of extreme high-expression genes. The histogram shows a strong right-skewed distribution — most genes have low mean expression levels, while only a small number of genes are highly expressed.The red vertical line represents genes with a mean expression of 10 on the original scale. This helps distinguish lowly expressed genes (to the left of the line) from moderately or highly expressed genes (to the right). Overall, this distribution is typical for RNA-seq datasets, where a large proportion of genes are expressed at very low levels, and only a few are highly active across samples.
+
+
+#6. Import this csv file into an R object. What are the column names?
+```{r}
+# Q6 – Import growth_data.csv and inspect columns 
+
+# Download file from the assignment GitHub repo (if not already present)
+# (TIP: Click “View raw” on GitHub and copy that URL)
+url_growth <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/growth_data.csv"
+
+download.file(url_growth, destfile = "growth_data.csv", mode = "wb")
+
+# Read CSV into R object
+# (Week-7 manual used read.csv() for data frames)
+growth_data <- read.csv("growth_data.csv", header = TRUE)
+
+# Check the structure and first few rows
+str(growth_data)        # like in Week 7 to inspect types and columns
+head(growth_data)       # show first 6 rows
+
+# List the column names (explicit answer to the question)
+colnames(growth_data)
+```
+#ANSWER -6 : The dataset growth_data.csv was successfully imported using the read.csv() function. The structure (str()) and column names were inspected to confirm that the file was read correctly.
+
+
+#7. Calculate the mean and standard deviation of tree circumference at the start and end of the study at both sites.
+```{r}
+# Q7 – Mean and Standard Deviation of Tree Circumference 
+
+# Ensure dataset is available
+stopifnot(exists("growth_data"))
+
+# Calculate mean circumference at the start (2005) for each Site
+mean_start <- aggregate(Circumf_2005_cm ~ Site, data = growth_data, FUN = mean)
+
+# Calculate standard deviation at the start (2005) for each Site
+sd_start <- aggregate(Circumf_2005_cm ~ Site, data = growth_data, FUN = sd)
+
+# Calculate mean circumference at the end (2020) for each Site
+mean_end <- aggregate(Circumf_2020_cm ~ Site, data = growth_data, FUN = mean)
+
+# Calculate standard deviation at the end (2020) for each Site
+sd_end <- aggregate(Circumf_2020_cm ~ Site, data = growth_data, FUN = sd)
+
+# Combine all results into one table
+summary_table <- data.frame(
+  Site = mean_start$Site,
+  Mean_2005 = round(mean_start$Circumf_2005_cm, 2),
+  SD_2005 = round(sd_start$Circumf_2005_cm, 2),
+  Mean_2020 = round(mean_end$Circumf_2020_cm, 2),
+  SD_2020 = round(sd_end$Circumf_2020_cm, 2)
+)
+
+# 7) Display result
+summary_table
+```
+#ANSWER 7 : The results show that trees at both sites grew substantially between 2005 and 2020. The northeast site had slightly larger mean circumferences and greater variation (higher standard deviation) compared to the southwest site, suggesting greater overall growth and possibly more heterogeneous tree sizes in that location.
+
+
+#8. Make a box plot of tree circumference at the start and end of the study at both sites.
+```{r}
+# Q8 – Boxplots of Tree Circumference at Start and End by Site --------------------
+
+# Ensure dataset exists
+stopifnot(exists("growth_data"))
+
+# Set plot layout: 1 row × 2 columns
+par(mfrow = c(1, 2))
+
+# 1) Boxplot for start (2005)
+boxplot(
+  Circumf_2005_cm ~ Site,
+  data = growth_data,
+  col = c("lightgreen", "lightblue"),
+  main = "Tree Circumference in 2005 (Start)",
+  xlab = "Site",
+  ylab = "Circumference (cm)"
+)
+
+# 2) Boxplot for end (2020)
+boxplot(
+  Circumf_2020_cm ~ Site,
+  data = growth_data,
+  col = c("lightgreen", "lightblue"),
+  main = "Tree Circumference in 2020 (End)",
+  xlab = "Site",
+  ylab = "Circumference (cm)"
+)
+
+# Reset plot layout to default
+par(mfrow = c(1, 1))
+```
+#ANSWER-8 : Boxplots were created to compare tree circumferences between the northeast and southwest sites at both the start (2005) and the end (2020) of the study. At the start of the study (2005), both sites showed relatively small tree circumferences, with median values around 5–6 cm. The northeast site displayed slightly larger circumferences and a narrower spread, suggesting more uniform tree sizes compared to the southwest site. By 2020, both sites showed a clear increase in tree circumference, indicating substantial growth over time. The northeast site again exhibited slightly higher median values and greater variability, suggesting that some trees experienced more rapid growth.
+
+
+#9. Calculate the mean growth over the last 10 years at each site.
+```{r}
+# Q9 – Mean Growth over the Last 10 Years at Each Site 
+
+# Ensure dataset exists
+stopifnot(exists("growth_data"))
+
+# Create a new column for 10-year growth (2020 - 2010)
+growth_data$Growth_10yr <- growth_data$Circumf_2020_cm - growth_data$Circumf_2010_cm
+
+# Calculate the mean growth for each Site using aggregate()
+mean_growth <- aggregate(Growth_10yr ~ Site, data = growth_data, FUN = mean)
+
+# Round for neat presentation
+mean_growth$Growth_10yr <- round(mean_growth$Growth_10yr, 2)
+
+# Display result
+mean_growth
+```
+#ANSWER- 9 : Trees at the northeast site exhibited greater average growth (approximately 43 cm) compared to those at the southwest site (approximately 35 cm). This suggests that the northeast site had more favourable growth conditions—potentially due to differences in soil moisture, light availability, or microclimate.
+
+
+#10. Use the t.test to estimate the p-value that the 10 year growth is different at the two sites.
+```{r}
+# Q10 – Perform a t-test comparing 10-year growth between sites -------------------
+
+# Ensure Growth_10yr exists
+stopifnot("Growth_10yr" %in% colnames(growth_data))
+
+# Run an independent two-sample t-test
+growth_ttest <- t.test(Growth_10yr ~ Site, data = growth_data)
+
+# Display results
+growth_ttest
+```
+#ANSWER- 10 : An independent two-sample t-test was performed to determine whether the difference in 10-year growth between the two sites was statistically significant.
+#The results showed:
+#Mean growth (northeast): 42.94 cm
+#Mean growth (southwest): 35.49 cm
+#t = 1.888, df = 87.978, p-value = 0.06229
+#Since the p-value (≈ 0.06) is slightly above the standard significance threshold (0.05), there is no statistically significant difference in 10-year growth between the two sites at the 95% confidence level. However, the result is close to significance, suggesting that with a larger sample size, the difference might become statistically meaningful. Overall, the analysis indicates that while trees at the northeast site grew more on average, the observed difference is not statistically strong enough to confirm a significant site effect.
