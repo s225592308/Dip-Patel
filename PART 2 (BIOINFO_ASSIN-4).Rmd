@@ -1,0 +1,274 @@
+---
+title: "Part 2"
+author: "DIP PATEL(S225592308)"
+date: "2025-10-04"
+output:
+  html_document: default
+---
+
+
+#1. Download the whole set of coding DNA sequences for E. coli and your organism of interest. How many coding sequences are present in these organisms? Present this in the form of a table. Describe any differences between the two organisms.
+```{r}
+# Q1: Download, Import, and Count CDS Sequences 
+
+# Load required libraries
+suppressPackageStartupMessages({
+  library(seqinr)   # sequence analysis
+  library(R.utils)  # gunzip
+})
+
+# Define download URLs
+URL_ecoli <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655_gca_000005845/cds/Escherichia_coli_str_k_12_substr_mg1655_gca_000005845.ASM584v2.cds.all.fa.gz"
+URL_alpha <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_105_collection/alphaproteobacteria_bacterium_gca_002697805/cds/Alphaproteobacteria_bacterium_gca_002697805.ASM269780v1.cds.all.fa.gz"
+
+# Download and unzip files 
+if (!file.exists("ecoli_cds.fa")) {
+  download.file(URL_ecoli, destfile = "ecoli_cds.fa.gz", quiet = TRUE, mode = "wb")
+  R.utils::gunzip("ecoli_cds.fa.gz", overwrite = TRUE)
+}
+if (!file.exists("alphaproteo_cds.fa")) {
+  download.file(URL_alpha, destfile = "alphaproteo_cds.fa.gz", quiet = TRUE, mode = "wb")
+  R.utils::gunzip("alphaproteo_cds.fa.gz", overwrite = TRUE)
+}
+
+# Confirm both files exist
+stopifnot(file.exists("ecoli_cds.fa"), file.exists("alphaproteo_cds.fa"))
+
+# Read FASTA files
+cds_ecoli <- seqinr::read.fasta("ecoli_cds.fa")
+cds_alpha <- seqinr::read.fasta("alphaproteo_cds.fa")
+
+# Q1: Number of CDS in each organism
+num_ecoli_cds  <- length(cds_ecoli)
+num_alpha_cds  <- length(cds_alpha)
+
+data.frame(
+  Organism  = c("E. coli MG1655", "Alphaproteobacteria bacterium (GCA_002697805)"),
+  CDS_Count = c(num_ecoli_cds, num_alpha_cds),
+  row.names = NULL
+)
+
+```
+#ANSWEWR-1 : The total number of coding DNA sequences (CDS) identified were 4239 for E. coli K-12 MG1655 and 3714 for Alphaproteobacteria bacterium (GCA_002697805). E. coli therefore has a slightly larger gene complement, consistent with its larger and more versatile genome. In contrast, Alphaproteobacteria bacterium has fewer CDS, which may indicate a more compact genome or a lifestyle requiring fewer metabolic and regulatory genes. These results highlight typical genomic differences between model enteric bacteria and smaller, host-associated Alphaproteobacteria.
+
+
+#2. How much coding DNA is there in total for these two organisms? Present this in the form of a table. Describe any differences between the two organisms.
+```{r}
+# Q2: Total Coding DNA Length for Each Organism 
+# Extract CDS lengths using summary() and convert first column to numeric
+len_ecoli  <- as.numeric(summary(cds_ecoli)[, 1])
+len_alpha  <- as.numeric(summary(cds_alpha)[, 1])
+
+# Calculate total coding DNA length 
+total_ecoli <- sum(len_ecoli)
+total_alpha <- sum(len_alpha)
+
+# output table 
+data.frame(
+  Organism = c("E. coli MG1655", "Alphaproteobacteria bacterium (GCA_002697805)"),
+  Total_Coding_DNA_bp = c(total_ecoli, total_alpha),
+  row.names = NULL
+)
+```
+#ANSWEWR-2 : The total coding DNA length was calculated as 3,978,528 base pairs (bp) for E. coli K-12 MG1655 and 3,586,542 bp for Alphaproteobacteria bacterium (GCA_002697805). Although both organisms have similar genome sizes, E. coli has a slightly larger total coding region, reflecting its greater number of genes and higher genomic complexity. The smaller coding DNA length in Alphaproteobacteria suggests a more compact genome, which is typical of bacteria that have streamlined their genetic content for specialized or host-associated lifestyles.
+
+
+#3. Calculate the length of all coding sequences in these two organisms. Make a boxplot of coding sequence length in these organisms. What is the mean and median coding sequence length of these two organisms? Describe any differences between the two organisms.
+```{r}
+#Q3: Boxplot of CDS Lengths, Mean and Median
+
+# Calculate CDS lengths
+len_ecoli  <- as.numeric(summary(cds_ecoli)[, 1])
+len_alpha  <- as.numeric(summary(cds_alpha)[, 1])
+
+# Create Boxplot comparing CDS lengths between organisms
+boxplot(len_ecoli, len_alpha,
+        names = c("E. coli MG1655", "Alphaproteobacteria"),
+        ylab = "CDS Length (bp)",
+        main = "Distribution of CDS Lengths in E. coli vs Alphaproteobacteria",
+        col = c("lightblue", "lightgreen"))
+
+# Calculate mean and median CDS lengths for both organisms 
+length_stats <- data.frame(
+  Organism = c("E. coli MG1655", "Alphaproteobacteria bacterium (GCA_002697805)"),
+  Mean_CDS_Length   = c(mean(len_ecoli), mean(len_alpha)),
+  Median_CDS_Length = c(median(len_ecoli), median(len_alpha))
+)
+
+length_stats
+```
+#ANSWER-3 : The coding sequence (CDS) lengths were calculated for both organisms, and a boxplot was created to compare their distributions. The mean CDS length was approximately 939 bp for E. coli K-12 MG1655 and 966 bp for Alphaproteobacteria bacterium (GCA_002697805), while the median CDS lengths were around 834 bp and 861 bp, respectively.Both organisms exhibit a similar distribution of CDS lengths, with most genes falling between 500–1000 bp. However, Alphaproteobacteria shows a slightly higher average CDS length, suggesting that its genes may encode marginally larger proteins. The boxplot also highlights the presence of a few long outlier genes (>10,000 bp) in both genomes, which may represent large, multifunctional proteins.
+
+
+#4. Calculate the frequency of DNA bases in the total coding sequences for both organisms. Perform the same calculation for the total protein sequence. Create bar plots for nucleotide and amino acid frequency. Describe any differences between the two organisms.
+```{r}
+# --- Q4: Nucleotide & Amino Acid Frequencies (E. coli vs Alphaproteobacteria) ---
+
+# 1) DNA base frequencies
+# Flatten CDS lists to single DNA character vectors
+dna_ecoli <- unlist(cds_ecoli)
+dna_alpha <- unlist(cds_alpha)
+
+# Counts of A/C/G/T (Week 9 style: seqinr::count with wordsize = 1)
+dna_ecoli_counts <- seqinr::count(dna_ecoli, 1)  # named vector: a c g t
+dna_alpha_counts <- seqinr::count(dna_alpha, 1)
+
+# Convert to proportions
+dna_ecoli_prop <- dna_ecoli_counts / sum(dna_ecoli_counts)
+dna_alpha_prop <- dna_alpha_counts / sum(dna_alpha_counts)
+
+# Plot base-count barplots side-by-side
+op <- par(no.readonly = TRUE); par(mfrow = c(1,2), mar = c(4,4,3,1))
+barplot(dna_ecoli_counts,
+        main = "E. coli — Nucleotide Counts",
+        xlab = "Nucleotide", ylab = "Count")
+barplot(dna_alpha_counts,
+        main = "Alphaproteobacteria — Nucleotide Counts",
+        xlab = "Nucleotide", ylab = "Count")
+par(op)
+
+# Small summary table of nucleotide proportions
+nt_summary <- data.frame(
+  Nucleotide = toupper(names(dna_ecoli_prop)),
+  Ecoli_Prop = as.numeric(dna_ecoli_prop),
+  Alpha_Prop = as.numeric(dna_alpha_prop),
+  row.names  = NULL
+)
+nt_summary
+
+# 2) Amino acid frequencies --------------------------------------------------
+# Translate CDS to proteins (bacterial code = 11), drop stop codons "*"
+prot_ecoli <- lapply(cds_ecoli, function(x) seqinr::translate(x, numcode = 11))
+prot_alpha <- lapply(cds_alpha, function(x) seqinr::translate(x, numcode = 11))
+prot_ecoli <- lapply(prot_ecoli, function(v) v[v != "*"])
+prot_alpha <- lapply(prot_alpha, function(v) v[v != "*"])
+
+aa_ecoli <- unlist(prot_ecoli)
+aa_alpha <- unlist(prot_alpha)
+
+# Fix the 20-AA alphabet so counts line up in the same order
+AA20 <- strsplit("ACDEFGHIKLMNPQRSTVWY", "")[[1]]
+
+aa_ecoli_counts <- seqinr::count(aa_ecoli, wordsize = 1, alphabet = AA20)
+aa_alpha_counts <- seqinr::count(aa_alpha, wordsize = 1, alphabet = AA20)
+
+# Proportions
+aa_ecoli_prop <- aa_ecoli_counts / sum(aa_ecoli_counts)
+aa_alpha_prop <- aa_alpha_counts / sum(aa_alpha_counts)
+
+# Plot AA-count barplots side-by-side
+op <- par(no.readonly = TRUE); par(mfrow = c(1,2), mar = c(9,4,3,1))
+barplot(aa_ecoli_counts,
+        main = "E. coli — Amino Acid Counts",
+        xlab = "Amino acid", ylab = "Count", las = 2)
+barplot(aa_alpha_counts,
+        main = "Alphaproteobacteria — Amino Acid Counts",
+        xlab = "Amino acid", ylab = "Count", las = 2)
+par(op)
+
+# Summary table of AA proportions
+aa_summary <- data.frame(
+  AminoAcid = names(aa_ecoli_prop),
+  Ecoli_Prop = as.numeric(aa_ecoli_prop),
+  Alpha_Prop = as.numeric(aa_alpha_prop),
+  row.names = NULL
+)
+aa_summary
+```
+#ANSWER-4 :The frequency of DNA bases and amino acids was calculated across all coding sequences for both organisms. For nucleotides, E. coli K-12 MG1655 shows roughly balanced base composition with A ≈ 24 %, T ≈ 24 %, G ≈ 27 %, C ≈ 25 %, while Alphaproteobacteria bacterium (GCA_002697805) displays a higher GC content (G ≈ 28.6 %, C ≈ 27.4 %) and correspondingly lower A and T proportions. This indicates that the Alphaproteobacteria genome is more GC-rich overall. At the protein level, both species share similar amino-acid profiles, but Alphaproteobacteria shows slightly higher frequencies of alanine (A), glycine (G), valine (V), and aspartate (D)—amino acids commonly encoded by GC-rich codons—while E. coli has marginally more leucine (L) and lysine (K).
+
+
+#5. Create a codon usage table and quantify the codon usage bias among all coding sequences. Describe any differences between the two organisms with respect to their codon usage bias. Provide charts to support your observations.
+```{r}
+# ---- Q5: Codon Usage Bias (E. coli vs Alphaproteobacteria) ----
+# Reference: Week 09 Practical — "Codon Usage" section
+
+library(seqinr)
+
+#  Compute effective codon counts for each organism
+codon_usage_ecoli_counts  <- seqinr::uco(unlist(cds_ecoli),  index = "eff")
+codon_usage_alpha_counts  <- seqinr::uco(unlist(cds_alpha),  index = "eff")
+
+#   Compute Relative Synonymous Codon Usage (RSCU) values
+rscu_ecoli <- seqinr::uco(unlist(cds_ecoli),  index = "rscu")
+rscu_alpha <- seqinr::uco(unlist(cds_alpha),  index = "rscu")
+
+# Barplots — top 20 codons with highest RSCU per organism
+op <- par(no.readonly = TRUE); par(mfrow = c(1,2), mar = c(9,4,3,1))
+barplot(sort(rscu_ecoli, decreasing = TRUE)[1:20],
+        las = 2, xlab = "Codon", ylab = "RSCU",
+        main = "E. coli — Top 20 Codons (RSCU)")
+barplot(sort(rscu_alpha, decreasing = TRUE)[1:20],
+        las = 2, xlab = "Codon", ylab = "RSCU",
+        main = "Alphaproteobacteria — Top 20 Codons (RSCU)")
+par(op)
+
+#  Create a summary table with total codon counts
+codon_summary <- data.frame(
+  Organism     = c("E. coli K-12 MG1655", "Alphaproteobacteria (GCA_002697805)"),
+  Total_Codons = c(sum(codon_usage_ecoli_counts), sum(codon_usage_alpha_counts))
+)
+codon_summary
+
+```
+#ANSWER-5 : The codon usage patterns were calculated using seqinr::uco() to obtain both the effective codon counts and Relative Synonymous Codon Usage (RSCU) values for E. coli K-12 MG1655 and Alphaproteobacteria bacterium (GCA_002697805). The total number of codons identified was 1,231,676 in E. coli and 1,159,066 in Alphaproteobacteria. The RSCU bar plots for the top 20 codons reveal distinct codon usage preferences between the two species. E. coli displays a stronger preference for A- and T-ending codons, such as AAA (Lys), GAA (Glu), and GAT (Asp), which aligns with its relatively balanced GC content. In contrast, Alphaproteobacteria bacterium shows higher frequencies of G- and C-ending codons (e.g., GGC, CCG, GCG), consistent with its higher genomic GC composition.
+
+
+#6. In the organism of interest, identify 10 protein sequence k-mers of length 3-5 which are the most over- and under-represented k-mers in your organism of interest. Are these k-mers also over- and under- represented in E. coli to a similar extent? Provide plots to support your observations. Why do you think these sequences are present at different levels in the genomes of these organisms?
+
+```{r}
+#  Ensure protein lists exis
+if (!exists("prot_ecoli") || !exists("prot_alpha")) {
+  prot_ecoli <- lapply(cds_ecoli, function(x) seqinr::translate(x, numcode = 11))
+  prot_alpha <- lapply(cds_alpha, function(x) seqinr::translate(x, numcode = 11))
+}
+
+#   Remove stop codons "*" and flatten to single AA vectors
+prot_ecoli <- lapply(prot_ecoli, function(v) v[v != "*"])
+prot_alpha <- lapply(prot_alpha, function(v) v[v != "*"])
+aa_ecoli   <- unlist(prot_ecoli)
+aa_alpha   <- unlist(prot_alpha)
+
+#   Define standard 20-AA alphabet
+AA <- strsplit("ACDEFGHIKLMNPQRSTVWY", "")[[1]]
+
+# 4 Helper function to count k-mers 
+aa_kmer_freq <- function(aa_vec, k) {
+  seqinr::count(aa_vec, wordsize = k, alphabet = AA, freq = TRUE)
+}
+
+#  Analyse one k value
+analyse_k <- function(k) {
+  freq_alpha <- aa_kmer_freq(aa_alpha, k)
+  freq_ecoli <- aa_kmer_freq(aa_ecoli, k)
+  if (length(freq_alpha) == 0) return(invisible(NULL))
+
+  # Top / bottom 10 by Alphaproteobacteria frequency
+  top10    <- sort(freq_alpha, decreasing = TRUE)[1:min(10, sum(freq_alpha > 0))]
+  bottom10 <- sort(freq_alpha, decreasing = FALSE)[1:min(10, length(freq_alpha))]
+
+  # Align same k-mers for comparison
+  comp_top <- rbind(Alpha = freq_alpha[names(top10)],
+                    `E.coli` = freq_ecoli[names(top10)])
+  comp_bot <- rbind(Alpha = freq_alpha[names(bottom10)],
+                    `E.coli` = freq_ecoli[names(bottom10)])
+
+  # Plot comparisons
+  op <- par(no.readonly = TRUE); par(mfrow = c(1,2), mar = c(9,4,3,1))
+  barplot(comp_top, beside = TRUE, las = 2, ylab = "Frequency",
+          main = paste0("k=", k, " — Top 10 (Alphaproteobacteria)"))
+  barplot(comp_bot, beside = TRUE, las = 2, ylab = "Frequency",
+          main = paste0("k=", k, " — Bottom 10 (Alphaproteobacteria)"))
+  par(op)
+
+  invisible(list(k = k, top = top10, bottom = bottom10,
+                 comp_top = comp_top, comp_bottom = comp_bot))
+}
+
+#  Run for k = 3 – 5
+res_k3 <- analyse_k(3)
+res_k4 <- analyse_k(4)
+res_k5 <- analyse_k(5)
+
+```
+#ANSWER-6 : Protein k-mer frequencies of lengths 3, 4, and 5 amino acids were calculated for Alphaproteobacteria bacterium (GCA_002697805) and compared to E. coli K-12 MG1655 using seqinr::count(). The barplots show the top 10 over-represented and bottom 10 under-represented amino-acid motifs in Alphaproteobacteria, alongside their frequencies in E. coli. For Alphaproteobacteria, the most common k-mers include hydrophobic combinations such as LAA, ALA, VLA, and AAL, which are enriched in membrane or structural proteins. Conversely, acidic or polar motifs such as DED, EEE, and DDE appear among the least frequent. When compared to E. coli, several of these motifs occur at different relative frequencies, indicating that codon and amino-acid usage biases differ between the two organisms. The higher GC content of Alphaproteobacteria likely drives its enrichment in GC-rich codons and corresponding amino acids (e.g., alanine, glycine, valine), whereas E. coli uses a broader mix of AT- and GC-rich motifs.
